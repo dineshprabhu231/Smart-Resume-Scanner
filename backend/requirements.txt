@@ -7,7 +7,7 @@ Werkzeug==3.0.3
 
 # AI / NLP
 scikit-learn>=1.6
-spacy>=3.7
+spacy>=3.7.5
 nltk==3.8.1
 numpy>=1.26
 
