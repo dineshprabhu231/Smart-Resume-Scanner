@@ -23,14 +23,15 @@ class Config:
         seconds=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 86400))
     )
 
-    # Database — defaults to SQLite, swap DATABASE_URL for MySQL
+    # Database — defaults to SQLite, swap DATABASE_URL for MySQL/Postgres in prod
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL", "sqlite:///smart_resume.db"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # File uploads
-    UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "..", "uploads")
+    # File uploads (Vercel Serverless requires writing to /tmp)
+    is_prod = os.getenv("FLASK_ENV") == "production"
+    UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/tmp" if is_prod else os.path.join(os.path.dirname(__file__), "..", "uploads"))
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", 16 * 1024 * 1024))  # 16 MB
     ALLOWED_EXTENSIONS = {"pdf", "docx", "doc"}
 
