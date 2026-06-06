@@ -11,16 +11,11 @@ services:
       - key: FLASK_ENV
         value: production
       - key: SECRET_KEY
-        generateValue: true
+        value: your-secret-key-change-this-in-dashboard
       - key: JWT_SECRET_KEY
-        generateValue: true
+        value: your-jwt-secret-change-this-in-dashboard
       - key: JWT_ACCESS_TOKEN_EXPIRES
-        value: 86400
-      - key: DATABASE_URL
-        fromDatabase:
-          name: smart-resume-db
-          property: connectionString
+        value: "86400"
 databases:
   - name: smart-resume-db
-    databaseName: smart_resume_db
     plan: free
