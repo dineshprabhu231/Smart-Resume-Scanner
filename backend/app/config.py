@@ -42,6 +42,9 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+    # For production, ensure all database and file configs are set via environment
+    # Database URL should be provided by Render (PostgreSQL)
+    # Upload folder will use /tmp (Vercel) or /tmp (Render)
 
 
 config_map = {
