@@ -18,7 +18,10 @@ def create_app(env: str = None) -> Flask:
     env = env or os.getenv("FLASK_ENV", "development")
     app.config.from_object(config_map.get(env, config_map["development"]))
 
-    # Ensure upload folder exists
+    # Ensure upload folder exists (Use /tmp for Vercel)
+    is_prod = os.getenv("FLASK_ENV") == "production"
+    if is_prod:
+        app.config["UPLOAD_FOLDER"] = "/tmp"
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
     # Initialize extensions
