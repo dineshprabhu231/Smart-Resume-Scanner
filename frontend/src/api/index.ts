@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /**
  * Axios API service layer
  * All HTTP requests go through this module — centralizes auth headers and error handling.
@@ -6,9 +7,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-  // In Render/production, serve frontend + backend under same origin if possible,
-  // so default to relative /api.
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  // Render setup uses separate frontend + backend services.
+  // You must set VITE_API_BASE_URL in the frontend service environment.
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
