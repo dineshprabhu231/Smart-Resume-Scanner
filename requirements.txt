@@ -21,7 +21,5 @@ regex==2026.5.9
 requests==2.34.2
 scikit-learn==1.9.0
 scipy==1.17.1
-spacy==3.8.14
 SQLAlchemy==2.0.50
 Werkzeug==3.0.3
-en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl#sha256=1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85
