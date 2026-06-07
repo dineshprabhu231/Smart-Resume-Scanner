@@ -6,9 +6,27 @@ Falls back gracefully if models are not installed.
 
 import re
 import logging
-from typing import List, Tuple
+from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
+
+# ─── Runtime Model Initialization (Render-safe) ───────────────────────────────
+# Avoid loading spaCy / downloading NLTK data on every request.
+# If models/resources are missing in the Render environment, we fall back gracefully.
+SPACY_MODEL_NAME = "en_core_web_sm"
+_spacy_nlp = None
+try:
+    import spacy  # type: ignore
+
+    try:
+        _spacy_nlp = spacy.load(SPACY_MODEL_NAME)
+        logger.info(f"Loaded spaCy model: {SPACY_MODEL_NAME}")
+    except Exception as e:
+        logger.warning(f"spaCy model not available ({SPACY_MODEL_NAME}): {e}")
+        _spacy_nlp = None
+except Exception as e:
+    logger.debug(f"spaCy not available: {e}")
+    _spacy_nlp = None
 
 # ─── Tech Skills Vocabulary ──────────────────────────────────────────────────────
 TECH_SKILLS = {
@@ -62,21 +80,19 @@ def extract_skills(text: str) -> List[str]:
         if re.search(pattern, text_lower):
             found_skills.add(skill.title())
 
-    # spaCy NER for additional entities
-    try:
-        import spacy
-        nlp = spacy.load("en_core_web_sm")
-        doc = nlp(text[:50000])  # Limit for performance
+    # spaCy NER for additional entities (only if model is available)
+    if _spacy_nlp is not None:
+        try:
+            doc = _spacy_nlp(text[:50000])  # Limit for performance
+            for ent in doc.ents:
+                if ent.label_ in ("ORG", "PRODUCT", "WORK_OF_ART"):
+                    entity_text = ent.text.strip().lower()
+                    if entity_text in TECH_SKILLS:
+                        found_skills.add(ent.text.strip().title())
+        except Exception as e:
+            logger.debug(f"spaCy NER skipped: {e}")
 
-        for ent in doc.ents:
-            if ent.label_ in ("ORG", "PRODUCT", "WORK_OF_ART"):
-                entity_text = ent.text.strip().lower()
-                if entity_text in TECH_SKILLS:
-                    found_skills.add(ent.text.strip().title())
-    except Exception as e:
-        logger.debug(f"spaCy NER skipped: {e}")
-
-    return sorted(list(found_skills))
+    return sorted(found_skills)
 
 
 def extract_keywords(text: str, top_n: int = 20) -> List[str]:
@@ -87,43 +103,40 @@ def extract_keywords(text: str, top_n: int = 20) -> List[str]:
     if not text:
         return []
 
+    # Try NLTK only if resources are already present (no downloads on Render).
     try:
-        import nltk
-        from nltk.corpus import stopwords
-        from nltk.tokenize import word_tokenize
+        import nltk  # type: ignore
+        from nltk.corpus import stopwords  # type: ignore
+        from nltk.tokenize import word_tokenize  # type: ignore
 
-        # Download required NLTK data quietly
-        for resource in ["punkt", "stopwords", "punkt_tab"]:
-            try:
-                nltk.download(resource, quiet=True)
-            except Exception:
-                pass
+        try:
+            stop_words = set(stopwords.words("english"))
+        except Exception:
+            stop_words = set()
 
         tokens = word_tokenize(text.lower())
-        stop_words = set(stopwords.words("english"))
         filtered = [
             w for w in tokens
             if w.isalnum() and w not in stop_words and len(w) > 2
         ]
 
-        # Frequency distribution
-        freq = {}
+        freq: Dict[str, int] = {}
         for word in filtered:
             freq[word] = freq.get(word, 0) + 1
 
         sorted_words = sorted(freq.items(), key=lambda x: x[1], reverse=True)
         return [word for word, _ in sorted_words[:top_n]]
-
     except Exception as e:
-        logger.debug(f"NLTK keyword extraction failed: {e}")
-        # Simple fallback
-        words = re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())
-        common = ["the", "and", "for", "with", "that", "this", "are", "have", "from"]
-        filtered = [w for w in words if w not in common]
-        freq = {}
-        for w in filtered:
-            freq[w] = freq.get(w, 0) + 1
-        return sorted(freq, key=freq.get, reverse=True)[:top_n]
+        logger.debug(f"NLTK keyword extraction failed (no-download mode): {e}")
+
+    # Simple fallback (always works)
+    words = re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())
+    common = ["the", "and", "for", "with", "that", "this", "are", "have", "from"]
+    filtered = [w for w in words if w not in common]
+    freq: Dict[str, int] = {}
+    for w in filtered:
+        freq[w] = freq.get(w, 0) + 1
+    return sorted(freq, key=freq.get, reverse=True)[:top_n]
 
 
 def compute_ats_score(text: str) -> float:
